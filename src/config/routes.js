@@ -1,10 +1,11 @@
-import Dashboard from '@/components/pages/Dashboard';
-import Contacts from '@/components/pages/Contacts';
-import ContactDetail from '@/components/pages/ContactDetail';
-import Pipeline from '@/components/pages/Pipeline';
-import Tasks from '@/components/pages/Tasks';
-import Settings from '@/components/pages/Settings';
-import CustomFields from '@/components/pages/CustomFields';
+import React from "react";
+import CustomFields from "@/components/pages/CustomFields";
+import Settings from "@/components/pages/Settings";
+import Contacts from "@/components/pages/Contacts";
+import Tasks from "@/components/pages/Tasks";
+import ContactDetail from "@/components/pages/ContactDetail";
+import Dashboard from "@/components/pages/Dashboard";
+import Pipeline from "@/components/pages/Pipeline";
 export const routes = {
   dashboard: {
     id: 'dashboard',
@@ -13,28 +14,26 @@ export const routes = {
     icon: 'LayoutDashboard',
     component: Dashboard
   },
-  contacts: {
+contacts: {
     id: 'contacts',
     label: 'Contacts',
     path: '/contacts',
     icon: 'Users',
     component: Contacts
-},
+  },
   contactDetail: {
     id: 'contactDetail',
     label: 'Contact Detail',
     path: '/contacts/:id',
     icon: 'User',
-    component: ContactDetail,
-    hidden: true
+    component: ContactDetail
   },
-  addContact: {
-    id: 'addContact',
-    label: 'Add Contact',
-    path: '/contacts/add',
-    icon: 'UserPlus',
-    component: () => import('@/components/pages/AddContact').then(m => m.default),
-    hidden: true
+  customFields: {
+    id: 'customFields',
+    label: 'Custom Fields',
+    path: '/custom-fields',
+    icon: 'Settings',
+    component: CustomFields
   },
   pipeline: {
     id: 'pipeline',
@@ -49,7 +48,7 @@ export const routes = {
     path: '/tasks',
     icon: 'CheckSquare',
     component: Tasks
-},
+  },
   emailIntegration: {
     id: 'emailIntegration',
     label: 'Email Integration',
@@ -63,14 +62,6 @@ export const routes = {
     path: '/settings',
     icon: 'Settings',
     component: Settings
-  },
-  customFields: {
-    id: 'customFields',
-    label: 'Custom Fields',
-    path: '/custom-fields',
-    icon: 'Settings',
-    component: CustomFields,
-    hidden: true
   }
 };
 
