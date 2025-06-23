@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'react-toastify';
-import taskService from '@/services/api/taskService';
-import contactService from '@/services/api/contactService';
-import TaskItem from '@/components/molecules/TaskItem';
-import Button from '@/components/atoms/Button';
-import Badge from '@/components/atoms/Badge';
-import ApperIcon from '@/components/ApperIcon';
+import React, { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "react-toastify";
+import contactService from "@/services/api/contactService";
+import { create, getAll } from "@/services/api/customFieldService";
+import taskService from "@/services/api/taskService";
+import ApperIcon from "@/components/ApperIcon";
+import Tasks from "@/components/pages/Tasks";
+import TaskItem from "@/components/molecules/TaskItem";
+import Badge from "@/components/atoms/Badge";
+import Button from "@/components/atoms/Button";
+import Input from "@/components/atoms/Input";
 
 const TaskList = () => {
   const [tasks, setTasks] = useState([]);
@@ -15,6 +18,17 @@ const TaskList = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    priority: 'medium',
+    dueDate: '',
+    contactId: '',
+    dealId: ''
+  });
+  const [formErrors, setFormErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -84,9 +98,103 @@ const TaskList = () => {
     }
   };
 
-  const handleEdit = (task) => {
+const handleEdit = (task) => {
     console.log('Edit task:', task);
     toast.info('Edit functionality coming soon');
+  };
+
+  const handleAddTask = () => {
+    setFormData({
+      title: '',
+      description: '',
+      priority: 'medium',
+      dueDate: '',
+      contactId: '',
+      dealId: ''
+    });
+    setFormErrors({});
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setFormData({
+      title: '',
+      description: '',
+      priority: 'medium',
+      dueDate: '',
+      contactId: '',
+      dealId: ''
+    });
+    setFormErrors({});
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    // Clear error when user starts typing
+    if (formErrors[field]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.title.trim()) {
+      errors.title = 'Title is required';
+    }
+    
+    if (!formData.dueDate) {
+      errors.dueDate = 'Due date is required';
+    } else {
+      const dueDate = new Date(formData.dueDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (dueDate < today) {
+        errors.dueDate = 'Due date cannot be in the past';
+      }
+    }
+    
+    if (!formData.priority) {
+      errors.priority = 'Priority is required';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setSubmitting(true);
+    try {
+      const taskData = {
+        ...formData,
+        contactId: formData.contactId ? parseInt(formData.contactId, 10) : null,
+        dealId: formData.dealId ? parseInt(formData.dealId, 10) : null,
+        dueDate: new Date(formData.dueDate).toISOString()
+      };
+      
+      await taskService.create(taskData);
+      await loadData();
+      handleCloseModal();
+      toast.success('Task created successfully');
+    } catch (err) {
+      toast.error('Failed to create task');
+      console.error('Error creating task:', err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDelete = async (task) => {
@@ -194,8 +302,8 @@ const TaskList = () => {
           ))}
         </div>
 
-        <Button 
-          onClick={() => toast.info('Add task functionality coming soon')}
+<Button 
+          onClick={handleAddTask}
           variant="primary"
           icon="Plus"
           className="w-full sm:w-auto"
@@ -215,9 +323,9 @@ const TaskList = () => {
           <p className="text-gray-600 mb-4">
             {filter === 'all' ? 'Get started by creating your first task' : 'Try switching to a different filter'}
           </p>
-          {filter === 'all' && (
+{filter === 'all' && (
             <Button 
-              onClick={() => toast.info('Add task functionality coming soon')}
+              onClick={handleAddTask}
               variant="primary"
               icon="Plus"
             >
@@ -247,7 +355,156 @@ const TaskList = () => {
             </motion.div>
           ))}
         </AnimatePresence>
-      </div>
+</div>
+
+      {/* Add Task Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+            onClick={handleCloseModal}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md"
+            >
+              <div className="bg-white rounded-lg shadow-xl">
+                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-900">Add New Task</h2>
+                  <button
+                    onClick={handleCloseModal}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <ApperIcon name="X" size={24} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Title *
+                    </label>
+                    <Input
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => handleInputChange('title', e.target.value)}
+                      placeholder="Enter task title"
+                      error={formErrors.title}
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => handleInputChange('description', e.target.value)}
+                      placeholder="Enter task description"
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Priority *
+                      </label>
+                      <select
+                        value={formData.priority}
+                        onChange={(e) => handleInputChange('priority', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </select>
+                      {formErrors.priority && (
+                        <p className="mt-1 text-sm text-error">{formErrors.priority}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Due Date *
+                      </label>
+                      <Input
+                        type="datetime-local"
+                        value={formData.dueDate}
+                        onChange={(e) => handleInputChange('dueDate', e.target.value)}
+                        error={formErrors.dueDate}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Contact (Optional)
+                      </label>
+                      <select
+                        value={formData.contactId}
+                        onChange={(e) => handleInputChange('contactId', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      >
+                        <option value="">Select contact</option>
+                        {contacts.map((contact) => (
+                          <option key={contact.Id} value={contact.Id}>
+                            {contact.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Deal (Optional)
+                      </label>
+                      <select
+                        value={formData.dealId}
+                        onChange={(e) => handleInputChange('dealId', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      >
+                        <option value="">Select deal</option>
+                        {/* Note: Would need deal data to populate this */}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleCloseModal}
+                      className="flex-1"
+                      disabled={submitting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      className="flex-1"
+                      disabled={submitting}
+                    >
+                      {submitting ? 'Creating...' : 'Create Task'}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
