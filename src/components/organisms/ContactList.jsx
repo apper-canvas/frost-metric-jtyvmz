@@ -2,261 +2,255 @@ import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import FilterBuilder from "@/components/organisms/FilterBuilder";
 import contactService from "@/services/api/contactService";
 import { getAll } from "@/services/api/customFieldService";
 import ApperIcon from "@/components/ApperIcon";
 import Contacts from "@/components/pages/Contacts";
 import SearchBar from "@/components/molecules/SearchBar";
 import ContactCard from "@/components/molecules/ContactCard";
+import FilterBuilder from "@/components/organisms/FilterBuilder";
 import Button from "@/components/atoms/Button";
 
-const ContactList = () => {
-  const navigate = useNavigate();
-  const [contacts, setContacts] = useState([]);
-  const [filteredContacts, setFilteredContacts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showFilterBuilder, setShowFilterBuilder] = useState(false);
-  const [activeFilter, setActiveFilter] = useState(null);
-  const [availableFields, setAvailableFields] = useState([]);
-useEffect(() => {
-    loadContacts();
-    loadFilterFields();
-  }, []);
+function ContactList() {
+  const [contacts, setContacts] = useState([])
+  const [filteredContacts, setFilteredContacts] = useState([])
+  const [availableFields, setAvailableFields] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [showFilters, setShowFilters] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const navigate = useNavigate()
 
+  // Load contacts on component mount
+  useEffect(() => {
+    const initializeData = async () => {
+      await Promise.all([
+        loadContacts(),
+        loadFilterFields()
+      ])
+    }
+    
+    initializeData()
+  }, [])
+
+  // Handle search filtering
   useEffect(() => {
     if (searchQuery.trim()) {
-      const filtered = contacts.filter(contact => 
-        contact.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        contact.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        contact.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        contact.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        contact.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        contact.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-      setFilteredContacts(filtered);
+      handleSearch(searchQuery)
     } else {
-      setFilteredContacts(contacts);
+      setFilteredContacts(contacts)
     }
-  }, [contacts, searchQuery]);
+  }, [searchQuery, contacts])
 
   const loadContacts = async () => {
-    setLoading(true);
-    setError(null);
     try {
-      const result = await contactService.getAll();
-      setContacts(result);
-    } catch (err) {
-      setError(err.message || 'Failed to load contacts');
-      toast.error('Failed to load contacts');
+      setLoading(true)
+      setError(null)
+      const result = await contactService.getAll()
+      if (result && Array.isArray(result)) {
+        setContacts(result)
+        setFilteredContacts(result)
+      } else {
+        throw new Error('Invalid contact data received')
+      }
+    } catch (error) {
+      console.error('Failed to load contacts:', error)
+      setError('Failed to load contacts')
+      toast.error('Failed to load contacts')
+      setContacts([])
+      setFilteredContacts([])
     } finally {
-      setLoading(false);
-}
-  };
+      setLoading(false)
+    }
+  }
 
   const loadFilterFields = async () => {
     try {
-      const fields = await contactService.getFilterFields();
-      setAvailableFields(fields);
-    } catch (error) {
-      console.error('Failed to load filter fields:', error);
-    }
-  };
-
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-  };
-
-  const handleApplyFilter = async (filterConfig) => {
-    if (!filterConfig) {
-      setActiveFilter(null);
-      setFilteredContacts(contacts);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const filtered = await contactService.advancedFilter(filterConfig);
-      setFilteredContacts(filtered);
-      setActiveFilter(filterConfig);
-      setShowFilterBuilder(false);
-    } catch (error) {
-      toast.error('Failed to apply filter');
-    } finally {
-      setLoading(false);
-    }
-  };
-  const handleEdit = (contact) => {
-    // Edit functionality would open a modal in real implementation
-    console.log('Edit contact:', contact);
-    toast.info('Edit functionality coming soon');
-  };
-
-  const handleDelete = async (contact) => {
-    if (window.confirm(`Are you sure you want to delete ${contact.firstName} ${contact.lastName}?`)) {
-      try {
-        await contactService.delete(contact.Id);
-        await loadContacts();
-        toast.success('Contact deleted successfully');
-      } catch (err) {
-        toast.error('Failed to delete contact');
+      const fields = await contactService.getFilterFields()
+      if (fields && Array.isArray(fields)) {
+        setAvailableFields(fields)
+      } else {
+        setAvailableFields([])
       }
+    } catch (error) {
+      console.error('Failed to load filter fields:', error)
+      setAvailableFields([])
+      // Don't show toast for filter fields failure as it's not critical
     }
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(6)].map((_, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="bg-white rounded-lg p-6 shadow-sm"
-          >
-            <div className="animate-pulse space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-                <div className="space-y-2 flex-1">
-                  <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/4"></div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    );
   }
 
+  const handleSearch = async (query) => {
+    try {
+      setLoading(true)
+      const filtered = await contactService.search(query)
+      if (filtered && Array.isArray(filtered)) {
+        setFilteredContacts(filtered)
+      } else {
+        setFilteredContacts([])
+      }
+    } catch (error) {
+      console.error('Search failed:', error)
+      toast.error('Search failed')
+      setFilteredContacts(contacts) // Fallback to all contacts
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleApplyFilter = async (filterConfig) => {
+    try {
+      setLoading(true)
+      const filtered = await contactService.advancedFilter(filterConfig)
+      if (filtered && Array.isArray(filtered)) {
+        setFilteredContacts(filtered)
+      } else {
+        setFilteredContacts([])
+      }
+      setShowFilters(false)
+    } catch (error) {
+      console.error('Filter failed:', error)
+      toast.error('Filter application failed')
+      setFilteredContacts(contacts) // Fallback to all contacts
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEdit = (contact) => {
+    if (contact?.id) {
+      navigate(`/contacts/${contact.id}/edit`)
+    }
+  }
+
+  const handleDelete = async (contact) => {
+    if (!contact?.id || !contact?.name) {
+      toast.error('Invalid contact data')
+      return
+    }
+
+    if (window.confirm(`Are you sure you want to delete ${contact.name}?`)) {
+      try {
+        await contactService.delete(contact.id)
+        toast.success('Contact deleted successfully')
+        // Reload contacts after deletion
+        await loadContacts()
+      } catch (error) {
+        console.error('Failed to delete contact:', error)
+        toast.error('Failed to delete contact')
+      }
+    }
+  }
+
+  // Show loading state
+  if (loading && contacts.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    )
+  }
+
+  // Show error state
   if (error) {
     return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 bg-error/10 rounded-full flex items-center justify-center mx-auto mb-4">
-          <ApperIcon name="AlertCircle" className="w-8 h-8 text-error" />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Contacts</h3>
+      <div className="flex flex-col items-center justify-center h-64 text-center">
+        <ApperIcon name="AlertCircle" className="h-12 w-12 text-red-500 mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Contacts</h3>
         <p className="text-gray-600 mb-4">{error}</p>
         <Button onClick={loadContacts} variant="primary">
           Try Again
         </Button>
       </div>
-    );
+    )
   }
 
-  if (filteredContacts.length === 0 && !searchQuery) {
-    return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-          <ApperIcon name="Users" className="w-8 h-8 text-primary" />
+  return (
+    <div className="space-y-6">
+      {/* Header with search and filter controls */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex-1 max-w-md">
+          <SearchBar
+            placeholder="Search contacts..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
         </div>
-<h3 className="text-lg font-semibold text-gray-900 mb-2">No Contacts Yet</h3>
-        <p className="text-gray-600 mb-4">Get started by adding your first contact</p>
-        <Button 
-          onClick={() => navigate('/contacts/add')} 
-          variant="primary"
-          icon="Plus"
-        >
-          Add Contact
-        </Button>
-      </div>
-    );
-  }
-
-return (
-    <>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="flex gap-3 w-full sm:w-auto">
-            <SearchBar 
-              onSearch={handleSearch}
-              placeholder="Search contacts..."
-              className="flex-1 sm:w-96"
-            />
-            <Button 
-              onClick={() => setShowFilterBuilder(true)}
-              variant="secondary"
-              icon="Filter"
-              className={activeFilter ? 'border-primary text-primary' : ''}
-            >
-              Advanced Filters
-              {activeFilter && (
-                <span className="ml-1 px-1.5 py-0.5 bg-primary text-white text-xs rounded">
-                  {activeFilter.conditions.length}
-                </span>
-              )}
-            </Button>
-</div>
-          <Button 
-            onClick={() => navigate('/contacts/add')}
-            variant="primary"
-            icon="Plus"
-            className="w-full sm:w-auto"
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowFilters(!showFilters)}
+            variant={showFilters ? 'primary' : 'secondary'}
           >
+            <ApperIcon name="Filter" className="h-4 w-4 mr-2" />
+            Filters
+          </Button>
+          <Button onClick={() => navigate('/contacts/new')} variant="primary">
+            <ApperIcon name="Plus" className="h-4 w-4 mr-2" />
             Add Contact
           </Button>
         </div>
+      </div>
 
-      {searchQuery && (
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span>Showing {filteredContacts.length} result{filteredContacts.length !== 1 ? 's' : ''} for "{searchQuery}"</span>
-          <button 
-            onClick={() => setSearchQuery('')}
-            className="text-primary hover:text-primary/80"
+      {/* Filter Builder */}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
           >
-            Clear
-          </button>
-        </div>
-      )}
+            <FilterBuilder
+              availableFields={availableFields}
+              onApplyFilter={handleApplyFilter}
+              onCancel={() => setShowFilters(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      {/* Contacts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence>
-          {filteredContacts.map((contact, index) => (
-            <motion.div
-              key={contact.Id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ delay: index * 0.05 }}
-            >
+          {filteredContacts.length > 0 ? (
+            filteredContacts.map((contact, index) => (
               <ContactCard
+                key={contact?.id || index}
                 contact={contact}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />
+            ))
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="col-span-full flex flex-col items-center justify-center h-64 text-center"
+            >
+              <ApperIcon name="Users" className="h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Contacts Found</h3>
+              <p className="text-gray-600 mb-4">
+                {searchQuery ? 'Try adjusting your search criteria' : 'Get started by adding your first contact'}
+              </p>
+              <Button onClick={() => navigate('/contacts/new')} variant="primary">
+                <ApperIcon name="Plus" className="h-4 w-4 mr-2" />
+                Add Contact
+              </Button>
             </motion.div>
-          ))}
+          )}
         </AnimatePresence>
       </div>
 
-{filteredContacts.length === 0 && searchQuery && (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ApperIcon name="Search" className="w-8 h-8 text-gray-400" />
+      {/* Loading overlay for filter/search operations */}
+      {loading && contacts.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 shadow-lg">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-2 text-sm text-gray-600">Processing...</p>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Results Found</h3>
-          <p className="text-gray-600">Try adjusting your search terms</p>
         </div>
       )}
     </div>
+  )
+}
 
-    <FilterBuilder
-      isOpen={showFilterBuilder}
-      onClose={() => setShowFilterBuilder(false)}
-      onApplyFilter={handleApplyFilter}
-      entityType="contacts"
-      availableFields={availableFields}
-      currentFilter={activeFilter}
-    />
-  </>
-);
-};
-
-export default ContactList;
+export default ContactList
