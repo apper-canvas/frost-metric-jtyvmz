@@ -19,13 +19,21 @@ export const routes = {
     path: '/contacts',
     icon: 'Users',
     component: Contacts
-  },
+},
   contactDetail: {
     id: 'contactDetail',
     label: 'Contact Detail',
     path: '/contacts/:id',
     icon: 'User',
     component: ContactDetail,
+    hidden: true
+  },
+  addContact: {
+    id: 'addContact',
+    label: 'Add Contact',
+    path: '/contacts/add',
+    icon: 'UserPlus',
+    component: () => import('@/components/pages/AddContact').then(m => m.default),
     hidden: true
   },
   pipeline: {

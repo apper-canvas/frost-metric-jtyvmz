@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import FilterBuilder from "@/components/organisms/FilterBuilder";
 import contactService from "@/services/api/contactService";
 import { getAll } from "@/services/api/customFieldService";
@@ -11,6 +12,7 @@ import ContactCard from "@/components/molecules/ContactCard";
 import Button from "@/components/atoms/Button";
 
 const ContactList = () => {
+  const navigate = useNavigate();
   const [contacts, setContacts] = useState([]);
   const [filteredContacts, setFilteredContacts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -155,10 +157,10 @@ useEffect(() => {
         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
           <ApperIcon name="Users" className="w-8 h-8 text-primary" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Contacts Yet</h3>
+<h3 className="text-lg font-semibold text-gray-900 mb-2">No Contacts Yet</h3>
         <p className="text-gray-600 mb-4">Get started by adding your first contact</p>
         <Button 
-          onClick={() => toast.info('Add contact functionality coming soon')} 
+          onClick={() => navigate('/contacts/add')} 
           variant="primary"
           icon="Plus"
         >
@@ -191,9 +193,9 @@ return (
                 </span>
               )}
             </Button>
-          </div>
+</div>
           <Button 
-            onClick={() => toast.info('Add contact functionality coming soon')}
+            onClick={() => navigate('/contacts/add')}
             variant="primary"
             icon="Plus"
             className="w-full sm:w-auto"
