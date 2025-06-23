@@ -62,6 +62,13 @@ contacts: {
     path: '/settings',
     icon: 'Settings',
     component: Settings
+},
+  contactAdd: {
+    id: 'contactAdd',
+    label: 'Add Contact',
+    path: '/contacts/add',
+    icon: 'UserPlus',
+    component: () => import('@/components/pages/ContactForm').then(m => m.default)
   }
 };
 
